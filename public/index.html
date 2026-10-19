@@ -1,0 +1,194 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="description" content="Escribe lo que te preocupa y recibe versículos de la Biblia (NVI), una reflexión y una oración.">
+<title>Iris</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;1,500&family=Figtree:wght@400;500;600&display=swap">
+<style>
+*{box-sizing:border-box}
+html{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+body{margin:0}
+[hidden]{display:none!important}
+/* Layout: one calm reading column — a question card on top, the answer reads like an open page below */
+:root{
+  --bg:#EEF1F6; --surface:#FFFFFF; --ink:#1F2340; --muted:#5D6280; --line:#D6DBE8;
+  --iris:#4B4FA6; --iris-soft:#E4E5F6; --gold:#B08A3E;
+  --display:"Cormorant Garamond", Georgia, "Times New Roman", serif;
+  --body:"Figtree", system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#13152A; --surface:#1C1F38; --ink:#E7E8F4; --muted:#A3A7C6; --line:#30355A;
+  --iris:#A9ACF0; --iris-soft:#2A2E58; --gold:#D9B66C; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#13152A; --surface:#1C1F38; --ink:#E7E8F4; --muted:#A3A7C6; --line:#30355A;
+  --iris:#A9ACF0; --iris-soft:#2A2E58; --gold:#D9B66C; color-scheme:dark}
+
+body{background:var(--bg);color:var(--ink);font-family:var(--body);font-size:16px;line-height:1.6;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));}
+.wrap{max-width:680px;margin:0 auto;padding-block:40px 64px;display:flex;flex-direction:column;gap:28px}
+header{display:flex;flex-direction:column;gap:6px}
+.brand{font-family:var(--display);font-size:clamp(2.6rem,7vw,3.4rem);font-weight:600;line-height:1;letter-spacing:.01em;margin:0;color:var(--ink)}
+.brand span{color:var(--iris)}
+.tag{margin:0;color:var(--muted);max-width:52ch}
+
+.ask{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:18px;display:flex;flex-direction:column;gap:14px}
+label{font-size:.78rem;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);font-weight:600}
+textarea{width:100%;box-sizing:border-box;min-height:110px;resize:vertical;border:1px solid var(--line);border-radius:10px;
+  padding:12px 14px;font:inherit;color:var(--ink);background:var(--bg)}
+textarea:focus-visible,button:focus-visible,a:focus-visible{outline:2px solid var(--iris);outline-offset:2px}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chip{border:1px solid var(--line);background:transparent;color:var(--muted);border-radius:999px;padding:5px 12px;font:inherit;font-size:.86rem;cursor:pointer}
+.chip:hover{border-color:var(--iris);color:var(--iris)}
+.row{display:flex;flex-wrap:wrap;gap:12px;align-items:center;justify-content:space-between}
+.go{background:var(--iris);color:var(--surface);border:0;border-radius:10px;padding:11px 20px;font:inherit;font-weight:600;cursor:pointer}
+.go:disabled{opacity:.55;cursor:default}
+.status{font-size:.88rem;color:var(--muted);min-height:1.4em}
+
+.answer{display:flex;flex-direction:column;gap:22px}
+.eyebrow{font-size:.76rem;text-transform:uppercase;letter-spacing:.1em;color:var(--gold);font-weight:600;margin:0}
+.q{font-family:var(--display);font-style:italic;font-size:1.35rem;line-height:1.35;margin:0;color:var(--muted);text-wrap:balance}
+.lead{margin:0;font-size:1.05rem}
+.verses{display:flex;flex-direction:column;gap:16px}
+.verse{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:20px 22px;display:flex;flex-direction:column;gap:10px}
+.verse blockquote{margin:0;font-family:var(--display);font-size:1.45rem;line-height:1.35;font-weight:500;text-wrap:pretty}
+.cite{display:flex;flex-wrap:wrap;gap:10px;align-items:baseline;font-size:.9rem}
+.cite strong{color:var(--iris);font-weight:600}
+.cite a{color:var(--muted);font-size:.82rem}
+.why{margin:0;color:var(--muted);font-size:.95rem}
+h2{font-family:var(--display);font-size:1.5rem;font-weight:600;margin:0 0 6px}
+.prayer{background:var(--iris-soft);border-radius:14px;padding:18px 22px}
+.prayer p{margin:0;font-family:var(--display);font-style:italic;font-size:1.2rem;line-height:1.45}
+
+.history{display:flex;flex-direction:column;gap:8px}
+.history ul{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px}
+.history button{width:100%;text-align:left;background:transparent;border:0;border-bottom:1px solid var(--line);padding:8px 0;font:inherit;color:var(--ink);cursor:pointer}
+.history button:hover{color:var(--iris)}
+.history time{color:var(--muted);font-size:.8rem;margin-left:8px}
+.tabs{display:flex;gap:4px;border-bottom:1px solid var(--line)}
+.tab{background:transparent;border:0;border-bottom:2px solid transparent;margin-bottom:-1px;padding:10px 14px;font:inherit;font-weight:600;color:var(--muted);cursor:pointer;display:flex;gap:8px;align-items:center}
+.tab[aria-selected="true"]{color:var(--iris);border-bottom-color:var(--iris)}
+.count{font-size:.75rem;background:var(--iris-soft);color:var(--iris);border-radius:999px;padding:1px 8px;font-variant-numeric:tabular-nums}
+.panel{display:flex;flex-direction:column;gap:28px}
+.empty{color:var(--muted);margin:0}
+footer{font-size:.84rem;color:var(--muted);border-top:1px solid var(--line);padding-top:16px;display:flex;flex-direction:column;gap:6px}
+footer p{margin:0}
+@media (prefers-reduced-motion:no-preference){.answer{animation:rise .5s ease both}@keyframes rise{from{opacity:.4;transform:translateY(6px)}to{opacity:1;transform:none}}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1 class="brand">Iris<span>.</span></h1>
+    <p class="tag">Escribe lo que te preocupa o lo que te preguntas. Iris busca en la Biblia (NVI) palabras que te den paz y dirección.</p>
+  </header>
+
+  <nav class="tabs" role="tablist">
+    <button class="tab" role="tab" id="tAsk" aria-selected="true" aria-controls="tabAsk" type="button">Preguntar</button>
+    <button class="tab" role="tab" id="tHist" aria-selected="false" aria-controls="tabHist" type="button">Historial <span class="count" id="count">0</span></button>
+  </nav>
+
+  <div class="panel" id="tabAsk" role="tabpanel">
+  <form class="ask" id="form">
+    <label for="question">¿Qué hay en tu corazón hoy?</label>
+    <textarea id="question" placeholder="Por ejemplo: tengo miedo de no estar tomando la decisión correcta con mi trabajo…"></textarea>
+    <div class="chips" id="chips">
+      <button type="button" class="chip">Siento ansiedad por el futuro</button>
+      <button type="button" class="chip">Me siento sola</button>
+      <button type="button" class="chip">Tengo que tomar una decisión difícil</button>
+      <button type="button" class="chip">Estoy pasando por una pérdida</button>
+      <button type="button" class="chip">Siento que no soy suficiente</button>
+    </div>
+    <div class="row">
+      <span class="status" id="status" role="status"></span>
+      <button class="go" id="go" type="submit">Buscar en la Palabra</button>
+    </div>
+  </form>
+
+  <section class="answer" id="answer" aria-live="polite"></section>
+  </div>
+
+  <section class="panel history" id="tabHist" role="tabpanel" hidden>
+    <p class="eyebrow">Tus preguntas anteriores</p>
+    <p class="empty" id="empty">Todavía no has hecho ninguna pregunta. Cuando lo hagas, aparecerán aquí para que puedas volver a leerlas.</p>
+    <ul id="history"></ul>
+  </section>
+
+  <footer>
+    <p>Iris acompaña, pero no sustituye a tu iglesia, a un consejero ni a un profesional de la salud.</p>
+    <p>Si sientes que no puedes más o piensas en hacerte daño, llama al <strong>024</strong> (atención a la conducta suicida, España, 24 h) o al <strong>112</strong>.</p>
+  </footer>
+</div>
+<script>
+const $ = id => document.getElementById(id);
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const bgLink = ref => "https://www.biblegateway.com/passage/?version=NVI&search=" + encodeURIComponent(ref);
+
+function render(a){
+  $("answer").innerHTML = `
+    <div>
+      <p class="eyebrow">Lo que dice la Palabra</p>
+      <p class="q">“${esc(a.question)}”</p>
+    </div>
+    <p class="lead">${esc(a.lead)}</p>
+    <div class="verses">${(a.verses||[]).map(v=>`
+      <article class="verse">
+        <blockquote>${esc(v.text)}</blockquote>
+        <div class="cite"><strong>${esc(v.ref)}</strong> <a href="${bgLink(v.ref)}" target="_blank" rel="noopener">Leer el contexto (NVI) ↗</a></div>
+        <p class="why">${esc(v.why)}</p>
+      </article>`).join("")}
+    </div>
+    <div><h2>Para meditar</h2><p style="margin:0">${esc(a.reflection)}</p></div>
+    <div class="prayer"><p class="eyebrow" style="margin-bottom:6px">Una oración</p><p>${esc(a.prayer)}</p></div>`;
+}
+
+/* Historial guardado en el navegador de cada persona */
+function loadHist(){ try{ return JSON.parse(localStorage.getItem("iris-hist")||"[]"); }catch{ return []; } }
+function saveHist(h){ try{ localStorage.setItem("iris-hist", JSON.stringify(h.slice(0,30))); }catch{} }
+function drawHist(){
+  const h = loadHist();
+  $("empty").hidden = !!h.length; $("count").textContent = h.length;
+  $("history").innerHTML = h.map((a,i)=>`<li><button type="button" data-i="${i}">${esc(a.question)}<time>${esc(a.date||"")}</time></button></li>`).join("");
+}
+function showTab(t){
+  const ask = t === "ask";
+  $("tabAsk").hidden = !ask; $("tabHist").hidden = ask;
+  $("tAsk").setAttribute("aria-selected", ask); $("tHist").setAttribute("aria-selected", !ask);
+}
+$("tAsk").addEventListener("click", ()=>showTab("ask"));
+$("tHist").addEventListener("click", ()=>showTab("hist"));
+$("history").addEventListener("click", e=>{
+  const b = e.target.closest("button[data-i]"); if(!b) return;
+  render(loadHist()[+b.dataset.i]); showTab("ask"); $("answer").scrollIntoView({behavior:"smooth"});
+});
+$("chips").addEventListener("click", e=>{
+  if(e.target.classList.contains("chip")){ $("question").value = e.target.textContent; $("question").focus(); }
+});
+
+$("form").addEventListener("submit", async e=>{
+  e.preventDefault();
+  const q = $("question").value.trim();
+  if(!q){ $("status").textContent = "Escribe primero lo que te preocupa."; return; }
+  if(q.length > 1000){ $("status").textContent = "Intenta resumirlo en menos de 1000 caracteres."; return; }
+  $("go").disabled = true; $("status").textContent = "Buscando en las Escrituras…";
+  try{
+    const res = await fetch("/api/ask", {method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({question:q})});
+    const r = await res.json().catch(()=>({}));
+    if(!res.ok) throw new Error(r.error || "Error");
+    const a = {question:q, lead:r.lead, verses:r.verses, reflection:r.reflection, prayer:r.prayer,
+               date:new Date().toLocaleDateString("es-ES",{day:"numeric",month:"short"})};
+    render(a); const h = loadHist(); h.unshift(a); saveHist(h); drawHist();
+    $("status").textContent = ""; $("question").value = "";
+    $("answer").scrollIntoView({behavior:"smooth"});
+  }catch(err){
+    $("status").textContent = err.message && err.message !== "Error" ? err.message : "No se pudo obtener la respuesta. Inténtalo de nuevo.";
+  }finally{ $("go").disabled = false; }
+});
+
+drawHist();
+</script>
+</body>
+</html>
