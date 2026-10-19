@@ -1,0 +1,14 @@
+{
+  "name": "Iris",
+  "short_name": "Iris",
+  "description": "Palabras de la Biblia (NVI) para lo que hay en tu corazón.",
+  "lang": "es",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#13152A",
+  "theme_color": "#13152A",
+  "icons": [
+    { "src": "/brand/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "/brand/icon-512.png", "sizes": "512x512", "type": "image/png" }
+  ]
+}
