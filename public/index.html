@@ -74,6 +74,12 @@ h2{font-family:var(--display);font-size:1.5rem;font-weight:600;margin:0 0 6px}
 .count{font-size:.75rem;background:var(--iris-soft);color:var(--iris);border-radius:999px;padding:1px 8px;font-variant-numeric:tabular-nums}
 .panel{display:flex;flex-direction:column;gap:28px}
 .empty{color:var(--muted);margin:0}
+.turn{display:flex;flex-direction:column;gap:22px}
+.turn + .turn{border-top:1px solid var(--line);padding-top:28px}
+.follow{margin-top:4px}
+.actions{display:flex;flex-wrap:wrap;gap:10px;margin-left:auto}
+.ghost{background:transparent;color:var(--iris);border:1px solid var(--line);border-radius:10px;padding:11px 16px;font:inherit;font-weight:600;cursor:pointer}
+.ghost:hover{border-color:var(--iris)}
 footer{font-size:.84rem;color:var(--muted);border-top:1px solid var(--line);padding-top:16px;display:flex;flex-direction:column;gap:6px}
 footer p{margin:0}
 @media (prefers-reduced-motion:no-preference){.answer{animation:rise .5s ease both}@keyframes rise{from{opacity:.4;transform:translateY(6px)}to{opacity:1;transform:none}}}
@@ -126,32 +132,85 @@ footer p{margin:0}
 const $ = id => document.getElementById(id);
 const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const bgLink = ref => "https://www.biblegateway.com/passage/?version=NVI&search=" + encodeURIComponent(ref);
+const MAX_TURNS = 10;
 
-function render(a){
-  $("answer").innerHTML = `
+/* ---------- Conversaciones guardadas en el navegador ---------- */
+function loadConvs(){
+  try{
+    const c = JSON.parse(localStorage.getItem("iris-convs") || "null");
+    if (Array.isArray(c)) return c;
+    // Pasar el historial antiguo (una pregunta por entrada) al formato de conversación
+    const old = JSON.parse(localStorage.getItem("iris-hist") || "[]");
+    return old.map((a,i)=>({id:"old"+i, date:a.date||"", turns:[{question:a.question, answer:{lead:a.lead, verses:a.verses, reflection:a.reflection, prayer:a.prayer}}]}));
+  }catch{ return []; }
+}
+function saveConvs(c){ try{ localStorage.setItem("iris-convs", JSON.stringify(c.slice(0,30))); }catch{} }
+
+let current = null; // conversación abierta
+
+function upsert(conv){
+  const all = loadConvs().filter(c => c.id !== conv.id);
+  all.unshift(conv); saveConvs(all); drawHist();
+}
+
+/* ---------- Pintar una conversación ---------- */
+function turnHTML(t, i){
+  const a = t.answer || {};
+  return `
+  <article class="turn">
     <div>
-      <p class="eyebrow">Lo que dice la Palabra</p>
-      <p class="q">“${esc(a.question)}”</p>
+      <p class="eyebrow">${i === 0 ? "Lo que dice la Palabra" : "Seguimos hablando"}</p>
+      <p class="q">“${esc(t.question)}”</p>
     </div>
     <p class="lead">${esc(a.lead)}</p>
-    <div class="verses">${(a.verses||[]).map(v=>`
-      <article class="verse">
+    ${(a.verses||[]).length ? `<div class="verses">${a.verses.map(v=>`
+      <div class="verse">
         <blockquote>${esc(v.text)}</blockquote>
         <div class="cite"><strong>${esc(v.ref)}</strong> <a href="${bgLink(v.ref)}" target="_blank" rel="noopener">Leer el contexto (NVI) ↗</a></div>
         <p class="why">${esc(v.why)}</p>
-      </article>`).join("")}
-    </div>
-    <div><h2>Para meditar</h2><p style="margin:0">${esc(a.reflection)}</p></div>
-    <div class="prayer"><p class="eyebrow" style="margin-bottom:6px">Una oración</p><p>${esc(a.prayer)}</p></div>`;
+      </div>`).join("")}</div>` : ""}
+    ${a.reflection ? `<div><h2>Para meditar</h2><p style="margin:0">${esc(a.reflection)}</p></div>` : ""}
+    ${a.prayer ? `<div class="prayer"><p class="eyebrow" style="margin-bottom:6px">Una oración</p><p>${esc(a.prayer)}</p></div>` : ""}
+  </article>`;
 }
 
-/* Historial guardado en el navegador de cada persona */
-function loadHist(){ try{ return JSON.parse(localStorage.getItem("iris-hist")||"[]"); }catch{ return []; } }
-function saveHist(h){ try{ localStorage.setItem("iris-hist", JSON.stringify(h.slice(0,30))); }catch{} }
+function renderConv(conv){
+  current = conv;
+  const full = conv.turns.length >= MAX_TURNS;
+  $("answer").innerHTML = conv.turns.map(turnHTML).join("") + `
+    <form class="ask follow" id="followForm">
+      <label for="followQ">${full ? "Esta conversación ya es larga" : "¿Quieres seguir hablando?"}</label>
+      ${full
+        ? `<p class="empty">Para seguir, empieza una conversación nueva desde arriba.</p>`
+        : `<textarea id="followQ" placeholder="Cuéntale a Iris cómo te sientes con esto, o pregúntale algo más…"></textarea>
+           <div class="row">
+             <span class="status" id="followStatus" role="status"></span>
+             <div class="actions">
+               <button class="ghost" type="button" id="newConv">Nueva conversación</button>
+               <button class="go" id="followGo" type="submit">Responder</button>
+             </div>
+           </div>`}
+    </form>`;
+  if (!full){
+    $("followForm").addEventListener("submit", e => { e.preventDefault(); send($("followQ").value, true); });
+    $("newConv").addEventListener("click", startNew);
+  }
+}
+
+function startNew(){
+  current = null; $("answer").innerHTML = "";
+  showTab("ask"); window.scrollTo({top:0, behavior:"smooth"}); $("question").focus();
+}
+
+/* ---------- Historial ---------- */
 function drawHist(){
-  const h = loadHist();
-  $("empty").hidden = !!h.length; $("count").textContent = h.length;
-  $("history").innerHTML = h.map((a,i)=>`<li><button type="button" data-i="${i}">${esc(a.question)}<time>${esc(a.date||"")}</time></button></li>`).join("");
+  const c = loadConvs();
+  $("empty").hidden = !!c.length; $("count").textContent = c.length;
+  $("history").innerHTML = c.map((cv,i)=>{
+    const n = cv.turns.length;
+    return `<li><button type="button" data-i="${i}">${esc(cv.turns[0]?.question)}
+      <time>${esc(cv.date)}${n > 1 ? ` · ${n} mensajes` : ""}</time></button></li>`;
+  }).join("");
 }
 function showTab(t){
   const ask = t === "ask";
@@ -162,31 +221,43 @@ $("tAsk").addEventListener("click", ()=>showTab("ask"));
 $("tHist").addEventListener("click", ()=>showTab("hist"));
 $("history").addEventListener("click", e=>{
   const b = e.target.closest("button[data-i]"); if(!b) return;
-  render(loadHist()[+b.dataset.i]); showTab("ask"); $("answer").scrollIntoView({behavior:"smooth"});
+  renderConv(loadConvs()[+b.dataset.i]); showTab("ask"); $("answer").scrollIntoView({behavior:"smooth"});
 });
 $("chips").addEventListener("click", e=>{
   if(e.target.classList.contains("chip")){ $("question").value = e.target.textContent; $("question").focus(); }
 });
 
-$("form").addEventListener("submit", async e=>{
-  e.preventDefault();
-  const q = $("question").value.trim();
-  if(!q){ $("status").textContent = "Escribe primero lo que te preocupa."; return; }
-  if(q.length > 1000){ $("status").textContent = "Intenta resumirlo en menos de 1000 caracteres."; return; }
-  $("go").disabled = true; $("status").textContent = "Buscando en las Escrituras…";
+/* ---------- Enviar a Iris ---------- */
+async function send(text, isFollow){
+  const q = String(text || "").trim();
+  const status = isFollow ? $("followStatus") : $("status");
+  const btn = isFollow ? $("followGo") : $("go");
+  if(!q){ status.textContent = "Escribe primero lo que quieres decir."; return; }
+  if(q.length > 1000){ status.textContent = "Intenta resumirlo en menos de 1000 caracteres."; return; }
+
+  const base = isFollow && current ? current : {id: Date.now().toString(36), date: new Date().toLocaleDateString("es-ES",{day:"numeric",month:"short"}), turns: []};
+  const messages = [];
+  base.turns.forEach(t => {
+    messages.push({role:"user", content:t.question});
+    messages.push({role:"assistant", content:JSON.stringify(t.answer)});
+  });
+  messages.push({role:"user", content:q});
+
+  btn.disabled = true; status.textContent = isFollow ? "Iris está pensando…" : "Buscando en las Escrituras…";
   try{
-    const res = await fetch("/api/ask", {method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({question:q})});
+    const res = await fetch("/api/ask", {method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({messages})});
     const r = await res.json().catch(()=>({}));
     if(!res.ok) throw new Error(r.error || "Error");
-    const a = {question:q, lead:r.lead, verses:r.verses, reflection:r.reflection, prayer:r.prayer,
-               date:new Date().toLocaleDateString("es-ES",{day:"numeric",month:"short"})};
-    render(a); const h = loadHist(); h.unshift(a); saveHist(h); drawHist();
-    $("status").textContent = ""; $("question").value = "";
-    $("answer").scrollIntoView({behavior:"smooth"});
+    const conv = {...base, turns:[...base.turns, {question:q, answer:{lead:r.lead, verses:r.verses, reflection:r.reflection, prayer:r.prayer}}]};
+    upsert(conv); renderConv(conv);
+    if(!isFollow){ $("go").disabled = false; $("question").value = ""; $("status").textContent = ""; $("answer").scrollIntoView({behavior:"smooth"}); }
+    else { $("answer").lastElementChild.previousElementSibling.scrollIntoView({behavior:"smooth"}); }
   }catch(err){
-    $("status").textContent = err.message && err.message !== "Error" ? err.message : "No se pudo obtener la respuesta. Inténtalo de nuevo.";
-  }finally{ $("go").disabled = false; }
-});
+    status.textContent = err.message && err.message !== "Error" ? err.message : "No se pudo obtener la respuesta. Inténtalo de nuevo.";
+    btn.disabled = false;
+  }
+}
+$("form").addEventListener("submit", e=>{ e.preventDefault(); send($("question").value, false); });
 
 drawHist();
 </script>
