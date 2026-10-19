@@ -54,31 +54,41 @@ export default async function handler(req, res) {
 
   if (!process.env.ANTHROPIC_API_KEY) return res.status(500).json({ error: "Falta configurar la clave de la API en el servidor." });
 
-  try {
-    const r = await fetch("https://api.anthropic.com/v1/messages", {
-      method: "POST",
-      headers: {
-        "content-type": "application/json",
-        "x-api-key": process.env.ANTHROPIC_API_KEY,
-        "anthropic-version": "2023-06-01",
-      },
-      body: JSON.stringify({
-        model: MODEL,
-        max_tokens: 1500,
-        system: SYSTEM,
-        messages,
-      }),
-    });
-    const data = await r.json();
-    if (!r.ok) {
-      console.error("Anthropic error", r.status, data);
-      return res.status(502).json({ error: "No se pudo obtener la respuesta. Inténtalo de nuevo." });
+  // Hasta 2 intentos: si Claude está saturado o la respuesta llega cortada, se reintenta una vez
+  for (let attempt = 1; attempt <= 2; attempt++) {
+    try {
+      const r = await fetch("https://api.anthropic.com/v1/messages", {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+          "x-api-key": process.env.ANTHROPIC_API_KEY,
+          "anthropic-version": "2023-06-01",
+        },
+        body: JSON.stringify({ model: MODEL, max_tokens: 2500, system: SYSTEM, messages }),
+      });
+      const data = await r.json();
+      if (!r.ok) {
+        console.error("Anthropic error", r.status, data);
+        const temporary = r.status === 429 || r.status >= 500;
+        if (temporary && attempt < 2) { await new Promise(ok => setTimeout(ok, 1500)); continue; }
+        return res.status(502).json({ error: r.status === 401
+          ? "La clave de la API no es válida."
+          : "Iris está recibiendo muchas consultas. Inténtalo de nuevo en un momento." });
+      }
+      const text = (data.content || []).filter(b => b.type === "text").map(b => b.text).join("");
+      try {
+        const json = JSON.parse(text.slice(text.indexOf("{"), text.lastIndexOf("}") + 1));
+        if (!json.lead) throw new Error("sin lead");
+        return res.status(200).json(json);
+      } catch (parseErr) {
+        console.error("Respuesta no válida", data.stop_reason, text.slice(0, 500));
+        if (attempt < 2) continue;
+        return res.status(502).json({ error: "No se pudo obtener la respuesta. Inténtalo de nuevo." });
+      }
+    } catch (e) {
+      console.error(e);
+      if (attempt < 2) continue;
+      return res.status(500).json({ error: "No se pudo obtener la respuesta. Inténtalo de nuevo." });
     }
-    const text = (data.content || []).filter(b => b.type === "text").map(b => b.text).join("");
-    const json = JSON.parse(text.slice(text.indexOf("{"), text.lastIndexOf("}") + 1));
-    return res.status(200).json(json);
-  } catch (e) {
-    console.error(e);
-    return res.status(500).json({ error: "No se pudo obtener la respuesta. Inténtalo de nuevo." });
   }
 }
