@@ -47,8 +47,9 @@ body{background:var(--bg);color:var(--ink);font-family:var(--body);font-size:16p
 .wrap{max-width:680px;margin:0 auto;padding-block:40px 64px;display:flex;flex-direction:column;gap:28px}
 header{display:flex;flex-direction:column;gap:6px}
 header{gap:14px}
-.brand{margin:0;line-height:0}
-.logo{display:block;height:clamp(56px,13vw,84px);aspect-ratio:1084/412;max-width:100%;background:var(--logo);
+.brand{margin:0;line-height:0;display:flex;align-items:center;gap:12px}
+.emblem{width:clamp(44px,11vw,52px);height:auto;aspect-ratio:1;border-radius:50%;flex:none;box-shadow:0 0 0 1px var(--line)}
+.logo{display:block;height:clamp(30px,8vw,36px);aspect-ratio:1084/412;max-width:100%;background:var(--logo);
   -webkit-mask:url("/brand/iris-logo.png") left center/contain no-repeat;mask:url("/brand/iris-logo.png") left center/contain no-repeat}
 .motto{margin:0;font-style:italic;font-weight:700;font-size:.95rem;line-height:1.45;color:var(--ink);max-width:46ch}
 .motto cite{display:block;font-style:italic;font-weight:600;color:var(--iris)}
@@ -107,7 +108,7 @@ footer p{margin:0}
 <body>
 <div class="wrap">
   <header>
-    <h1 class="brand"><span class="logo" role="img" aria-label="Iris"></span></h1>
+    <h1 class="brand"><img class="emblem" src="/brand/icon-192.png" alt=""><span class="logo" role="img" aria-label="Iris"></span></h1>
     <p class="motto">“Porque donde están dos o tres reunidos en mi nombre, allí estoy yo en medio de ellos.”<cite>Mateo 18:20</cite></p>
     <p class="tag">Escribe lo que te preocupa o lo que te preguntas. Iris busca en la Biblia (NVI) palabras que te den paz y dirección.</p>
   </header>
